@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Astro-Sim</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      font-family: sans-serif;
+      z-index: 1;
+      border-radius: 8px;
+    }
+    label, input {
+      display: block;
+      margin: 5px 0;
+    }
+    input[type=range] {
+      width: 150px;
+    }
+    #navButton {
+      margin-top: 10px;
+      padding: 5px 10px;
+      background-color: #0ff;
+      border: none;
+      border-radius: 4px;
+      color: #000;
+      cursor: pointer;
+    }
+    #navButton:hover {
+      background-color: #0cf;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label>Hour Angle: <input type="range" id="hourAngle" min="0" max="360" value="0"> <span id="haVal">0</span>°</label>
+    <label>Altitude: <input type="range" id="altitude" min="0" max="90" value="45"> <span id="altVal">45</span>°</label>
+    <label>Azimuth: <input type="range" id="azimuth" min="0" max="360" value="180"> <span id="azVal">180</span>°</label>
+    <a id="navButton" href="page1.html">Orbital</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Celestial Sphere (wireframe)
+    const sphereGeometry = new THREE.SphereGeometry(5, 64, 64);
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x0077ff, wireframe: true });
+    const celestialSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    scene.add(celestialSphere);
+
+    // Observer point
+    const observer = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    scene.add(observer);
+
+    // Arrow Helper
+    const arrowDir = new THREE.Vector3(1, 1, 0).normalize();
+    const arrow = new THREE.ArrowHelper(arrowDir, observer.position, 5, 0xff0000);
+    scene.add(arrow);
+
+    // Sliders
+    const haSlider = document.getElementById('hourAngle');
+    const altSlider = document.getElementById('altitude');
+    const azSlider = document.getElementById('azimuth');
+
+    function updateArrow() {
+      document.getElementById('haVal').textContent = haSlider.value;
+      document.getElementById('altVal').textContent = altSlider.value;
+      document.getElementById('azVal').textContent = azSlider.value;
+
+      const az = THREE.MathUtils.degToRad(parseFloat(azSlider.value));
+      const alt = THREE.MathUtils.degToRad(parseFloat(altSlider.value));
+
+      // Spherical to Cartesian (Azimuth from North, Altitude from Horizon)
+      const x = Math.cos(alt) * Math.sin(az);
+      const y = Math.sin(alt);
+      const z = Math.cos(alt) * Math.cos(az);
+
+      const direction = new THREE.Vector3(x, y, z).normalize();
+      arrow.setDirection(direction);
+    }
+
+    haSlider.addEventListener('input', updateArrow);
+    altSlider.addEventListener('input', updateArrow);
+    azSlider.addEventListener('input', updateArrow);
+
+    // Initial setup
+    updateArrow();
+    camera.position.set(0, 0, 10);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
